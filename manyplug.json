@@ -1,6 +1,11 @@
 {
   "name": "counting",
-  "author": "SyntaxError <me@stxerr.dev> (https://www.stxerr.dev)",
+  "key": "synt-xerror/counting",
+  "author": {
+    "name": "SyntaxError",
+    "email": "me@stxerr.dev",
+    "website": "https://www.stxerr.dev"
+  },
   "description": "Counting game for Manybot.",
   "version": "1.0.0",
   "category": "games",
