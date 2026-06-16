@@ -2,7 +2,7 @@
   "name": "counting",
   "key": "synt-xerror/counting",
   "author": {
-    "name": "SyntaxError",
+    "name": "synt-xerror",
     "email": "me@stxerr.dev",
     "website": "https://www.stxerr.dev"
   },
