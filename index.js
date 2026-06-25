@@ -31,7 +31,7 @@ export default async function (ctx) {
   const { msg, chat } = ctx;
   const { t }         = ctx.i18n.createT(import.meta.url);
 
-  const storage = ctx.storage.path("chat_state.json");
+  const storage = ctx.storage.resolve("chat_state.json");
   const map     = loadState(storage);
 
   // ── Chat filter ─────────────────────────────────────────
