@@ -1,44 +1,47 @@
 /**
+ * teste
  * plugins/counting/index.js
- *
- * Counting game plugin with isolated i18n.
- * Users take turns sending the next integer in sequence.
- *
- * Rules:
- *  - Must send the next integer in sequence (current + 1)
- *  - Same user cannot continue their own count (but can restart from 1)
- *  - Any mistake resets the counter to 0
- *
- * Config:
- *  COUNTING_CHATS=[] — list of chat IDs where the game is active.
- *                      If empty, the plugin is silent in all chats.
  */
+import fs from "node:fs";
 
-// Game state isolated per chat
-const chatState = new Map(); // chatId -> { number, lastFrom }
+// ── Helpers ───────────────────────────────────────────────
 
-function getState(chatId) {
-  if (!chatState.has(chatId)) {
-    chatState.set(chatId, { number: 0, lastFrom: null });
+function loadState(storage) {
+  try {
+    return new Map(JSON.parse(fs.readFileSync(storage, "utf8")));
+  } catch {
+    return new Map();
   }
-  return chatState.get(chatId);
 }
+
+function saveState(storage, map) {
+  fs.writeFileSync(storage, JSON.stringify([...map]));
+}
+
+function getState(map, chatId) {
+  if (!map.has(chatId)) {
+    map.set(chatId, { number: 0, lastFrom: null });
+  }
+  return map.get(chatId);
+}
+
+// ── Plugin ────────────────────────────────────────────────
 
 export default async function (ctx) {
   const { msg, chat } = ctx;
-  const prefix        = ctx.config.get("CMD_PREFIX");
   const { t }         = ctx.i18n.createT(import.meta.url);
 
-  // ── Chat filter ───────────────────────────────────────────
+  const storage = ctx.storage.path("chat_state.json");
+  const map     = loadState(storage);
 
+  // ── Chat filter ─────────────────────────────────────────
   const allowedChats = ctx.config.get("COUNTING_CHATS", []);
   if (allowedChats.length > 0 && !allowedChats.includes(chat.id)) return;
 
-  // ── Info command ──────────────────────────────────────────
-
-  if (msg.is(prefix + "counting")) {
-    const state = getState(chat.id);
-    await ctx.send(
+  // ── Info command ─────────────────────────────────────────
+  if (msg.is("counting")) {
+    const state = getState(map, chat.id);
+    await ctx.send.text(
       `*${t("title")}*\n\n` +
       `${t("rulesLine1")}\n` +
       `${t("rulesLine2")}\n` +
@@ -48,18 +51,18 @@ export default async function (ctx) {
     return;
   }
 
-  // ── Game logic ────────────────────────────────────────────
-
+  // ── Game logic ───────────────────────────────────────────
   const n = Number(msg.body.trim());
   if (!Number.isInteger(n) || n === 0) return;
 
-  const state = getState(chat.id);
-  const from  = msg.sender;
+  const state = getState(map, chat.id);
+  const from = await msg.getContact().then(c => c.id);
 
   // regra 1: não pode continuar sozinho (mas pode recomeçar do 1)
   if (from === state.lastFrom && n !== 1) {
     state.number   = 0;
     state.lastFrom = null;
+    saveState(storage, map);
     await msg.react("❌").catch(() => {});
     return;
   }
@@ -68,10 +71,12 @@ export default async function (ctx) {
   if (n === state.number + 1) {
     state.number   = n;
     state.lastFrom = from;
+    saveState(storage, map);
     await msg.react("✅").catch(() => {});
   } else {
     state.number   = 0;
     state.lastFrom = null;
+    saveState(storage, map);
     await msg.react("❌").catch(() => {});
   }
 }
