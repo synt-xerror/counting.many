@@ -9,8 +9,7 @@
   "description": "Counting game for Manybot.",
   "license": "MIT",
   "repo": "https://github.com/synt-xerror/counting.many",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "category": "games",
-  "service": false,
   "dependencies": {}
 }
