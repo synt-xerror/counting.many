@@ -11,14 +11,15 @@ function loadState(storage) {
 }
 
 function saveState(storage, map) {
-  fs.writeFileSync(storage, JSON.stringify([...map]));
+  try {
+    fs.writeFileSync(storage, JSON.stringify([...map]));
+  } catch {}
 }
 
 function getState(map, chatId) {
   if (!map.has(chatId)) {
     map.set(chatId, {
       number: 0,
-      lastMentionText: null,
       lastMention: null,
       lastContactId: null,
     });
@@ -27,10 +28,9 @@ function getState(map, chatId) {
 }
 
 function resetState(state) {
-  state.number          = 0;
-  state.lastMention     = null;
-  state.lastMentionText = null;
-  state.lastContactId   = null;
+  state.number        = 0;
+  state.lastMention   = null;
+  state.lastContactId = null;
 }
 
 // ── Plugin ────────────────────────────────────────────────
@@ -56,8 +56,7 @@ export default async function (ctx) {
         return;
       }
 
-      const contact = await msg.getContact();
-      const isAdmin = contact ? await chat.isAdmin(contact.id) : false;
+      const isAdmin = await chat.isSenderAdmin();
       if (!isAdmin) {
         await msg.reply.text(t("onlyAdmins"));
         return;
@@ -76,16 +75,17 @@ export default async function (ctx) {
 
     const state = getState(map, chat.id);
 
-    await ctx.send.text(
+    const infoText =
       `*${t("title")}*\n\n` +
       `${t("rulesLine1")}\n` +
       `${t("rulesLine2")}\n` +
       `${t("rulesLine3")}\n\n` +
       t("current", { number: state.number }) +
-      (state.lastMention
-        ? "\n" + t("lastCounter") + `${state.lastMentionText}`
-        : "")
-    , state.lastMention ? { mentions: state.lastMention.mentions } : undefined);
+      (state.lastMention?.text
+        ? "\n" + t("lastCounter") + state.lastMention.text
+        : "");
+
+    await ctx.send.text(infoText, state.lastMention || undefined);
     return;
   }
 
@@ -99,8 +99,6 @@ export default async function (ctx) {
   const state   = getState(map, chat.id);
   const contact = await msg.getContact();
   if (!contact) return;
-  const mentionText = contact.mention.text;
-  const mention = contact.mention;
 
   // regra 1: não pode continuar sozinho (mas pode recomeçar do 1)
   if (contact.id === state.lastContactId && n !== 1) {
@@ -112,10 +110,9 @@ export default async function (ctx) {
 
   // regra 2: sequência numérica
   if (n === state.number + 1) {
-    state.number          = n;
-    state.lastMention     = mention;
-    state.lastMentionText = mentionText;
-    state.lastContactId   = contact.id;
+    state.number        = n;
+    state.lastMention   = contact.mention;
+    state.lastContactId = contact.id;
     saveState(storage, map);
     await msg.react("✅").catch(() => {});
   } else {
@@ -124,3 +121,4 @@ export default async function (ctx) {
     await msg.react("❌").catch(() => {});
   }
 }
+
