@@ -85,7 +85,7 @@ export default async function (ctx) {
       (state.lastMention
         ? "\n" + t("lastCounter") + `${state.lastMentionText}`
         : "")
-    , state.lastMention);
+    , state.lastMention ? { mentions: state.lastMention.mentions } : undefined);
     return;
   }
 
